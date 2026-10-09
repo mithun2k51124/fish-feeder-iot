@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AquaFeed IoT &bull; Smart Fish Feeder</title>
+  
+  <!-- Modern Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- MQTT.js library over WebSockets -->
+  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 10% 20%, #0a192f 0%, #020c1b 100%);
+      --card-bg: rgba(16, 32, 60, 0.7);
+      --card-border: rgba(100, 255, 218, 0.15);
+      --primary: #00e5ff;
+      --primary-hover: #00b4d8;
+      --accent: #64ffda;
+      --danger: #ff5370;
+      --warning: #ffd166;
+      --success: #06d6a0;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 10px;
+      --shadow-glow: 0 0 25px rgba(0, 229, 255, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #020c1b;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(0, 229, 255, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(100, 255, 218, 0.08) 0px, transparent 50%),
+        linear-gradient(180deg, #071527 0%, #020c1b 100%);
+      min-height: 100vh;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      overflow-x: hidden;
+    }
+
+    /* Ambient animated water glow */
+    .ambient-sphere {
+      position: fixed;
+      width: 450px;
+      height: 450px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 180, 216, 0.15) 0%, rgba(0,0,0,0) 70%);
+      filter: blur(40px);
+      z-index: 0;
+      pointer-events: none;
+      animation: floatGlow 12s infinite alternate ease-in-out;
+    }
+    @keyframes floatGlow {
+      0% { transform: translate(-20%, -20%) scale(1); }
+      100% { transform: translate(20%, 20%) scale(1.15); }
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Top Navigation / Brand Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 4px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #00e5ff 0%, #0077b6 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 15px rgba(0, 229, 255, 0.3);
+    }
+    .brand-text h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-settings {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-size: 1.15rem;
+    }
+    .btn-settings:hover {
+      background: rgba(0, 229, 255, 0.15);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: rotate(45deg);
+    }
+
+    /* Glass Card */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    /* Status Banner Card */
+    .status-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-badge-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status-beacon {
+      position: relative;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #718096;
+    }
+    .status-beacon.online {
+      background: var(--success);
+      box-shadow: 0 0 14px var(--success);
+    }
+    .status-beacon.online::after {
+      content: '';
+      position: absolute;
+      top: -4px; left: -4px; right: -4px; bottom: -4px;
+      border-radius: 50%;
+      border: 2px solid var(--success);
+      animation: pulse 1.8s infinite ease-out;
+    }
+    .status-beacon.offline {
+      background: var(--danger);
+      box-shadow: 0 0 10px var(--danger);
+    }
+    .status-beacon.connecting {
+      background: var(--warning);
+      box-shadow: 0 0 10px var(--warning);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 1; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    .status-info h2 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .status-info p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .time-badge {
+      text-align: right;
+    }
+    .time-badge .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+    .time-badge .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* Main Action Feeder Control Card */
+    .feed-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 32px 20px;
+    }
+
+    .feed-button-wrapper {
+      position: relative;
+      width: 190px;
+      height: 190px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0 24px;
+    }
+
+    .feed-svg-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .feed-svg-ring circle {
+      fill: none;
+      stroke-width: 6;
+      cx: 95;
+      cy: 95;
+      r: 88;
+    }
+    .ring-bg {
+      stroke: rgba(255, 255, 255, 0.06);
+    }
+    .ring-progress {
+      stroke: var(--primary);
+      stroke-linecap: round;
+      stroke-dasharray: 553;
+      stroke-dashoffset: 553;
+      transition: stroke-dashoffset 0.2s linear;
+    }
+
+    .btn-feed {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #00b4d8 0%, #0077b6 50%, #03045e 100%);
+      box-shadow: 0 8px 30px rgba(0, 180, 216, 0.45), inset 0 2px 6px rgba(255, 255, 255, 0.4);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .btn-feed:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 12px 40px rgba(0, 229, 255, 0.6), inset 0 2px 8px rgba(255, 255, 255, 0.6);
+    }
+    .btn-feed:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .btn-feed:disabled {
+      background: #1e293b;
+      box-shadow: none;
+      color: #64748b;
+      cursor: not-allowed;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-feed-icon {
+      font-size: 2.3rem;
+      margin-bottom: 4px;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+    }
+    .btn-feed-text {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .btn-feed-sub {
+      font-size: 0.72rem;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+
+    /* Cooldown Countdown Overlay */
+    .cooldown-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--warning);
+      display: none;
+    }
+
+    /* PIN Verification Bar */
+    .pin-container {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 6px 14px;
+      gap: 10px;
+    }
+    .pin-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .pin-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.05rem;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 3px;
+      outline: none;
+      text-align: center;
+    }
+    .pin-input::placeholder {
+      letter-spacing: 0;
+      font-size: 0.85rem;
+      color: #475569;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .pin-badge {
+      font-size: 0.7rem;
+      background: rgba(100, 255, 218, 0.15);
+      color: var(--accent);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    /* Feeding Schedule & Quick Stats */
+    .grid-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .info-card {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .info-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .info-header span {
+      font-size: 1rem;
+    }
+    .info-val {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .info-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* Live Feed History Log */
+    .log-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 280px;
+    }
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .log-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+    }
+    .clear-log {
+      font-size: 0.75rem;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .log-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.45);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--primary);
+      font-size: 0.82rem;
+    }
+    .log-item.scheduled {
+      border-left-color: var(--accent);
+    }
+    .log-item.cooldown {
+      border-left-color: var(--warning);
+    }
+    .log-item.offline {
+      border-left-color: var(--danger);
+    }
+    .log-text {
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+    .log-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Modal / Drawer for Settings */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 99;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal {
+      width: 100%;
+      max-width: 440px;
+      background: #0d1b2e;
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transform: scale(0.92);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-backdrop.open .modal {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .btn-close-modal {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-input {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .form-input:focus {
+      border-color: var(--primary);
+    }
+    .form-hint {
+      font-size: 0.7rem;
+      color: #64748b;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn-save {
+      flex: 1;
+      background: var(--primary);
+      color: #020c1b;
+      font-weight: 700;
+      border: none;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: opacity 0.2s;
+    }
+    .btn-save:hover { opacity: 0.9; }
+    .btn-cancel {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-sphere"></div>
+
+  <div class="container">
+    <!-- Top Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">🐠</div>
+        <div class="brand-text">
+          <h1>AquaFeed IoT</h1>
+          <span>Cloud Fish Feeder</span>
+        </div>
+      </div>
+      <button class="btn-settings" id="btnOpenSettings" title="Configure HiveMQ Cloud & Topics">⚙️</button>
+    </header>
+
+    <!-- Feeder Status Card -->
+    <div class="card status-card">
+      <div class="status-badge-container">
+        <div class="status-beacon connecting" id="statusBeacon"></div>
+        <div class="status-info">
+          <h2 id="statusHeadline">Connecting...</h2>
+          <p id="statusSubtitle">Connecting to HiveMQ Cloud WebSocket...</p>
+        </div>
+      </div>
+      <div class="time-badge">
+        <div class="label">Feeder Time</div>
+        <div class="val" id="feederClock">--:--</div>
+      </div>
+    </div>
+
+    <!-- Main Feed Control Card -->
+    <div class="card feed-card">
+      <div class="pin-container">
+        <span class="pin-label">PIN Code:</span>
+        <input type="password" id="pinInput" class="pin-input" placeholder="Enter PIN (Default 1234)" maxlength="8" inputmode="numeric" value="1234">
+        <span class="pin-badge" id="pinBadge">LOCKED</span>
+      </div>
+
+      <div class="feed-button-wrapper">
+        <svg class="feed-svg-ring" viewBox="0 0 190 190">
+          <circle class="ring-bg"></circle>
+          <circle class="ring-progress" id="cooldownRing"></circle>
+        </svg>
+
+        <button class="btn-feed" id="feedBtn" disabled>
+          <div class="btn-feed-icon" id="btnIcon">🐟</div>
+          <div class="btn-feed-text" id="btnMainText">Feed Now</div>
+          <div class="btn-feed-sub" id="btnSubText">Tap to dispense</div>
+          <div class="cooldown-text" id="cooldownSeconds">30s</div>
+        </button>
+      </div>
+
+      <p id="feedFeedback" style="font-size: 0.85rem; color: var(--text-muted); min-height: 20px;">
+        Ready for feeding command.
+      </p>
+    </div>
+
+    <!-- Schedule & Next Meal Cards -->
+    <div class="grid-info">
+      <div class="card info-card">
+        <div class="info-header">
+          <span>⏰</span> Auto Schedule
+        </div>
+        <div class="info-val">08:00 & 18:00</div>
+        <div class="info-sub">NTP Sync (Twice Daily)</div>
+      </div>
+
+      <div class="card info-card">
+        <div class="info-header">
+          <span>⏳</span> Next Scheduled
+        </div>
+        <div class="info-val" id="nextFeedTimer">--:--:--</div>
+        <div class="info-sub" id="nextFeedTarget">Upcoming feeding</div>
+      </div>
+    </div>
+
+    <!-- Live Event Log -->
+    <div class="card log-card">
+      <div class="log-header">
+        <span class="log-title">Telemetry & Activity Log</span>
+        <button class="clear-log" id="btnClearLog">Clear</button>
+      </div>
+      <div class="log-list" id="logList">
+        <div class="log-item">
+          <span class="log-text">Dashboard initialized</span>
+          <span class="log-time" id="initTime">--:--</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings / Credentials Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Cloud Broker Settings</div>
+        <button class="btn-close-modal" id="btnCloseModal">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">HiveMQ Cluster Host</label>
+        <input type="text" id="cfgHost" class="form-input" placeholder="e.g. abc123.s1.eu.hivemq.cloud">
+        <span class="form-hint">Port 8884 with path /mqtt (Secure WebSocket)</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Team / Topic Prefix</label>
+        <input type="text" id="cfgTeam" class="form-input" placeholder="e.g. yourteam">
+        <span class="form-hint">Topics: [team]/fishfeeder/cmd and [team]/fishfeeder/status</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">MQTT Username (Web user)</label>
+        <input type="text" id="cfgUser" class="form-input" placeholder="webpage">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">MQTT Password</label>
+        <input type="password" id="cfgPass" class="form-input" placeholder="Enter webpage MQTT password">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Security PIN</label>
+        <input type="password" id="cfgPin" class="form-input" placeholder="1234">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btnResetDefaults">Defaults</button>
+        <button class="btn-save" id="btnSaveConfig">Save & Reconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // CONFIGURATION & PERSISTENCE
+    // =========================================================================
+    const DEFAULT_CONFIG = {
+      host: "broker.hivemq.com",
+      user: "",
+      pass: "",
+      team: "mithun_feeder",
+      pin: "1234"
+    };
+
+    function loadConfig() {
+      const saved = localStorage.getItem("aquafeed_cfg");
+      if (saved) {
+        try { return { ...DEFAULT_CONFIG, ...JSON.parse(saved) }; } catch(e){}
+      }
+      return { ...DEFAULT_CONFIG };
+    }
+
+    let config = loadConfig();
+
+    // =========================================================================
+    // UI ELEMENTS
+    // =========================================================================
+    const $ = id => document.getElementById(id);
+    const statusBeacon = $('statusBeacon');
+    const statusHeadline = $('statusHeadline');
+    const statusSubtitle = $('statusSubtitle');
+    const feederClock = $('feederClock');
+    const feedBtn = $('feedBtn');
+    const btnIcon = $('btnIcon');
+    const btnMainText = $('btnMainText');
+    const btnSubText = $('btnSubText');
+    const cooldownSeconds = $('cooldownSeconds');
+    const cooldownRing = $('cooldownRing');
+    const feedFeedback = $('feedFeedback');
+    const pinInput = $('pinInput');
+    const pinBadge = $('pinBadge');
+    const logList = $('logList');
+    const nextFeedTimer = $('nextFeedTimer');
+    const nextFeedTarget = $('nextFeedTarget');
+
+    // Modal elements
+    const modalBackdrop = $('modalBackdrop');
+    const btnOpenSettings = $('btnOpenSettings');
+    const btnCloseModal = $('btnCloseModal');
+    const btnSaveConfig = $('btnSaveConfig');
+    const btnResetDefaults = $('btnResetDefaults');
+    const cfgHost = $('cfgHost');
+    const cfgTeam = $('cfgTeam');
+    const cfgUser = $('cfgUser');
+    const cfgPass = $('cfgPass');
+    const cfgPin = $('cfgPin');
+
+    $('initTime').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+    // Web Audio synthesizer for tactile water drop sound
+    function playAudioTone(freq = 600, type = 'sine', duration = 0.15) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + duration);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    // =========================================================================
+    // LOGGING HELPER
+    // =========================================================================
+    function addLog(text, type = "normal") {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      
+      const item = document.createElement('div');
+      item.className = `log-item ${type}`;
+      item.innerHTML = `
+        <span class="log-text">${text}</span>
+        <span class="log-time">${timeStr}</span>
+      `;
+      logList.insertBefore(item, logList.firstChild);
+
+      // Keep max 25 logs
+      while (logList.children.length > 25) {
+        logList.removeChild(logList.lastChild);
+      }
+    }
+
+    $('btnClearLog').addEventListener('click', () => {
+      logList.innerHTML = '';
+      addLog("Log cleared");
+    });
+
+    // =========================================================================
+    // COOLDOWN LOGIC (30 Seconds)
+    // =========================================================================
+    let cooldownTimer = null;
+    const RING_CIRCUMFERENCE = 553;
+
+    function startCooldown(durationSec = 30) {
+      let remaining = durationSec;
+      clearInterval(cooldownTimer);
+
+      feedBtn.disabled = true;
+      btnIcon.style.display = 'none';
+      btnMainText.style.display = 'none';
+      btnSubText.style.display = 'none';
+      cooldownSeconds.style.display = 'block';
+
+      function tick() {
+        cooldownSeconds.textContent = remaining + 's';
+        const offset = RING_CIRCUMFERENCE * (1 - (remaining / durationSec));
+        cooldownRing.style.strokeDashoffset = offset;
+
+        if (remaining <= 0) {
+          clearInterval(cooldownTimer);
+          cooldownRing.style.strokeDashoffset = RING_CIRCUMFERENCE;
+          cooldownSeconds.style.display = 'none';
+          btnIcon.style.display = 'block';
+          btnMainText.style.display = 'block';
+          btnSubText.style.display = 'block';
+          
+          if (isFeederOnline) {
+            feedBtn.disabled = false;
+            feedFeedback.textContent = "Cooldown elapsed. Ready to feed.";
+            feedFeedback.style.color = "var(--text-muted)";
+          }
+        }
+        remaining--;
+      }
+
+      tick();
+      cooldownTimer = setInterval(tick, 1000);
+    }
+
+    // =========================================================================
+    // MQTT CLIENT
+    // =========================================================================
+    let client = null;
+    let isFeederOnline = false;
+
+    function initMQTT() {
+      if (client) {
+        try { client.end(true); } catch(e){}
+      }
+
+      const brokerUrl = `wss://${config.host}:8884/mqtt`;
+      const topicCmd = `${config.team}/fishfeeder/cmd`;
+      const topicStatus = `${config.team}/fishfeeder/status`;
+
+      statusBeacon.className = 'status-beacon connecting';
+      statusHeadline.textContent = 'Connecting...';
+      statusSubtitle.textContent = `Cluster: ${config.host}`;
+      feedBtn.disabled = true;
+
+      addLog(`Connecting to ${config.host}...`);
+
+      try {
+        const connectOpts = {
+          clientId: `web-aquafeed-${Math.random().toString(16).slice(2, 10)}`,
+          reconnectPeriod: 4000,
+          connectTimeout: 8000
+        };
+        if (config.user) connectOpts.username = config.user;
+        if (config.pass) connectOpts.password = config.pass;
+
+        client = mqtt.connect(brokerUrl, connectOpts);
+
+        client.on('connect', () => {
+          statusSubtitle.textContent = 'Broker connected. Waiting for feeder...';
+          addLog(`Connected to ${config.host}`);
+          client.subscribe(topicStatus, { qos: 0 }, (err) => {
+            if (!err) {
+              addLog(`Subscribed to: ${topicStatus}`);
+            } else {
+              addLog(`Subscribe error: ${err.message}`, 'offline');
+            }
+          });
+        });
+
+        client.on('message', (topic, payload) => {
+          const msg = payload.toString().trim();
+          handleFeederMessage(msg);
+        });
+
+        client.on('error', (err) => {
+          console.error("MQTT Error:", err);
+          statusBeacon.className = 'status-beacon offline';
+          statusHeadline.textContent = 'Connection Error';
+          statusSubtitle.textContent = err.message || 'Check credentials in settings';
+          addLog(`Error: ${err.message || 'Broker connection failed'}`, 'offline');
+        });
+
+        client.on('close', () => {
+          if (isFeederOnline) {
+            setFeederState(false, "Disconnected from broker");
+          }
+        });
+
+      } catch (err) {
+        statusBeacon.className = 'status-beacon offline';
+        statusHeadline.textContent = 'Setup Error';
+        statusSubtitle.textContent = 'Invalid broker parameters.';
+        addLog(`Config error: ${err.message}`, 'offline');
+      }
+    }
+
+    function setFeederState(online, reason) {
+      isFeederOnline = online;
+      if (online) {
+        statusBeacon.className = 'status-beacon online';
+        statusHeadline.textContent = 'Feeder Online';
+        statusSubtitle.textContent = 'ESP32 connected & ready';
+        if (!cooldownTimer) feedBtn.disabled = false;
+        feedFeedback.textContent = "Feeder is ready for commands.";
+        feedFeedback.style.color = "var(--text-muted)";
+      } else {
+        statusBeacon.className = 'status-beacon offline';
+        statusHeadline.textContent = 'Feeder Offline';
+        statusSubtitle.textContent = reason || 'ESP32 not detected on topic';
+        feedBtn.disabled = true;
+        feedFeedback.textContent = "Waiting for ESP32 to connect...";
+        feedFeedback.style.color = "var(--danger)";
+      }
+    }
+
+    function handleFeederMessage(msg) {
+      if (msg === "online") {
+        setFeederState(true);
+        addLog("ESP32 Feeder came online", "normal");
+        playAudioTone(800, 'sine', 0.1);
+      } 
+      else if (msg === "offline") {
+        setFeederState(false, "Received offline testament");
+        addLog("ESP32 Feeder went offline", "offline");
+      } 
+      else if (msg.startsWith("fed:")) {
+        const timePart = msg.replace("fed:", "").trim();
+        feederClock.textContent = timePart;
+        feedFeedback.textContent = `Feed cycle executed at ${timePart}!`;
+        feedFeedback.style.color = "var(--accent)";
+        addLog(`Feeder completed portion (Time: ${timePart})`, "normal");
+        playAudioTone(1200, 'sine', 0.25);
+        startCooldown(30);
+      } 
+      else if (msg === "cooldown") {
+        feedFeedback.textContent = "Cooldown active on ESP32! Please wait 30s.";
+        feedFeedback.style.color = "var(--warning)";
+        addLog("ESP32 reported cooldown active", "cooldown");
+        startCooldown(30);
+      } 
+      else {
+        addLog(`Status: ${msg}`);
+      }
+    }
+
+    // =========================================================================
+    // FEED BUTTON ACTION
+    // =========================================================================
+    feedBtn.addEventListener('click', () => {
+      const enteredPin = pinInput.value.trim();
+      if (enteredPin !== config.pin) {
+        feedFeedback.textContent = "Invalid PIN code. Feed denied.";
+        feedFeedback.style.color = "var(--danger)";
+        playAudioTone(220, 'sawtooth', 0.3);
+        pinInput.focus();
+        return;
+      }
+
+      if (!client || !client.connected) {
+        feedFeedback.textContent = "Not connected to MQTT broker.";
+        feedFeedback.style.color = "var(--danger)";
+        return;
+      }
+
+      const topicCmd = `${config.team}/fishfeeder/cmd`;
+      client.publish(topicCmd, "FEED", { qos: 0 }, (err) => {
+        if (!err) {
+          playAudioTone(520, 'sine', 0.15);
+          feedFeedback.textContent = "Command sent! Feeder stirring & opening gate...";
+          feedFeedback.style.color = "var(--primary)";
+          addLog("Published 'FEED' command to cmd topic");
+          
+          // Disable button immediately to prevent double-tap
+          feedBtn.disabled = true;
+          setTimeout(() => {
+            if (isFeederOnline && !cooldownTimer) feedBtn.disabled = false;
+          }, 5000);
+        } else {
+          feedFeedback.textContent = "Failed to send FEED command.";
+          feedFeedback.style.color = "var(--danger)";
+          addLog(`Publish failed: ${err.message}`, "offline");
+        }
+      });
+    });
+
+    // PIN check feedback
+    pinInput.addEventListener('input', () => {
+      if (pinInput.value.trim() === config.pin) {
+        pinBadge.textContent = "UNLOCKED";
+        pinBadge.style.color = "var(--success)";
+        pinBadge.style.background = "rgba(6, 214, 160, 0.15)";
+      } else {
+        pinBadge.textContent = "LOCKED";
+        pinBadge.style.color = "var(--danger)";
+        pinBadge.style.background = "rgba(255, 83, 112, 0.15)";
+      }
+    });
+    // Trigger initial check
+    pinInput.dispatchEvent(new Event('input'));
+
+    // =========================================================================
+    // SCHEDULE COUNTDOWN HELPER (8:00 & 18:00)
+    // =========================================================================
+    function updateScheduleTimer() {
+      const now = new Date();
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const s = now.getSeconds();
+
+      // Schedules: 8:00 and 18:00
+      let targetHour = 8;
+      let targetDate = new Date(now);
+      targetDate.setMinutes(0);
+      targetDate.setSeconds(0);
+      targetDate.setMilliseconds(0);
+
+      if (h < 8) {
+        targetDate.setHours(8);
+      } else if (h < 18) {
+        targetDate.setHours(18);
+      } else {
+        targetDate.setDate(targetDate.getDate() + 1);
+        targetDate.setHours(8);
+      }
+
+      const diffSec = Math.floor((targetDate - now) / 1000);
+      const hoursLeft = Math.floor(diffSec / 3600);
+      const minsLeft = Math.floor((diffSec % 3600) / 60);
+      const secsLeft = diffSec % 60;
+
+      const pad = n => String(n).padStart(2, '0');
+      nextFeedTimer.textContent = `${pad(hoursLeft)}:${pad(minsLeft)}:${pad(secsLeft)}`;
+      nextFeedTarget.textContent = `At ${pad(targetDate.getHours())}:00 (${targetDate.getHours() === 8 ? 'Morning' : 'Evening'})`;
+    }
+    setInterval(updateScheduleTimer, 1000);
+    updateScheduleTimer();
+
+    // =========================================================================
+    // SETTINGS MODAL BEHAVIOR
+    // =========================================================================
+    function populateModal() {
+      cfgHost.value = config.host;
+      cfgTeam.value = config.team;
+      cfgUser.value = config.user;
+      cfgPass.value = config.pass;
+      cfgPin.value = config.pin;
+    }
+
+    btnOpenSettings.addEventListener('click', () => {
+      populateModal();
+      modalBackdrop.classList.add('open');
+    });
+
+    btnCloseModal.addEventListener('click', () => {
+      modalBackdrop.classList.remove('open');
+    });
+
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) modalBackdrop.classList.remove('open');
+    });
+
+    btnResetDefaults.addEventListener('click', () => {
+      if (confirm("Reset to template default credentials?")) {
+        config = { ...DEFAULT_CONFIG };
+        localStorage.removeItem("aquafeed_cfg");
+        populateModal();
+      }
+    });
+
+    btnSaveConfig.addEventListener('click', () => {
+      config.host = cfgHost.value.trim() || DEFAULT_CONFIG.host;
+      config.team = cfgTeam.value.trim() || DEFAULT_CONFIG.team;
+      config.user = cfgUser.value.trim() || DEFAULT_CONFIG.user;
+      config.pass = cfgPass.value.trim() || DEFAULT_CONFIG.pass;
+      config.pin = cfgPin.value.trim() || DEFAULT_CONFIG.pin;
+
+      localStorage.setItem("aquafeed_cfg", JSON.stringify(config));
+      modalBackdrop.classList.remove('open');
+      pinInput.value = config.pin;
+      pinInput.dispatchEvent(new Event('input'));
+      addLog("Settings updated. Reconnecting...");
+      initMQTT();
+    });
+
+    // Auto connect on startup
+    window.addEventListener('DOMContentLoaded', () => {
+      initMQTT();
+    });
+  </script>
+</body>
+</html>
