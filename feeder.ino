@@ -38,7 +38,7 @@ const int   CLOSED_ANGLE   = 0;  // Gate closed position
 const int   OPEN_ANGLE     = 90; // Gate open position (drop food)
 
 // Safety & portion tuning
-const unsigned long COOLDOWN_MS = 30000; // 30-second minimum between feeds
+const unsigned long COOLDOWN_MS = 5000; // 5-second minimum between feeds
 
 // ----------------------------------------------------------------------------
 // 2. GLOBAL OBJECTS & STATE

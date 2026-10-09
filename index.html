@@ -8,7 +8,7 @@
   <!-- Modern Typography & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
   <!-- MQTT.js library over WebSockets -->
   <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
@@ -16,7 +16,7 @@
   <style>
     :root {
       --bg-gradient: radial-gradient(circle at 10% 20%, #0a192f 0%, #020c1b 100%);
-      --card-bg: rgba(16, 32, 60, 0.7);
+      --card-bg: rgba(16, 32, 60, 0.72);
       --card-border: rgba(100, 255, 218, 0.15);
       --primary: #00e5ff;
       --primary-hover: #00b4d8;
@@ -81,7 +81,7 @@
       gap: 20px;
     }
 
-    /* Top Navigation / Brand Header */
+    /* Header */
     header {
       display: flex;
       justify-content: space-between;
@@ -95,14 +95,14 @@
       gap: 10px;
     }
     .brand-icon {
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       background: linear-gradient(135deg, #00e5ff 0%, #0077b6 100%);
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 22px;
       box-shadow: 0 4px 15px rgba(0, 229, 255, 0.3);
     }
     .brand-text h1 {
@@ -229,17 +229,17 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: 32px 20px;
+      padding: 30px 20px;
     }
 
     .feed-button-wrapper {
       position: relative;
-      width: 190px;
-      height: 190px;
+      width: 180px;
+      height: 180px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 10px 0 24px;
+      margin: 10px 0 20px;
     }
 
     .feed-svg-ring {
@@ -251,9 +251,9 @@
     .feed-svg-ring circle {
       fill: none;
       stroke-width: 6;
-      cx: 95;
-      cy: 95;
-      r: 88;
+      cx: 90;
+      cy: 90;
+      r: 83;
     }
     .ring-bg {
       stroke: rgba(255, 255, 255, 0.06);
@@ -261,15 +261,15 @@
     .ring-progress {
       stroke: var(--primary);
       stroke-linecap: round;
-      stroke-dasharray: 553;
-      stroke-dashoffset: 553;
-      transition: stroke-dashoffset 0.2s linear;
+      stroke-dasharray: 521;
+      stroke-dashoffset: 521;
+      transition: stroke-dashoffset 0.25s linear;
     }
 
     .btn-feed {
       position: relative;
-      width: 160px;
-      height: 160px;
+      width: 150px;
+      height: 150px;
       border-radius: 50%;
       border: none;
       background: linear-gradient(135deg, #00b4d8 0%, #0077b6 50%, #03045e 100%);
@@ -301,26 +301,25 @@
     }
 
     .btn-feed-icon {
-      font-size: 2.3rem;
-      margin-bottom: 4px;
+      font-size: 2.2rem;
+      margin-bottom: 2px;
       filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
     }
     .btn-feed-text {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 800;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
     .btn-feed-sub {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       opacity: 0.85;
       font-weight: 500;
     }
 
-    /* Cooldown Countdown Overlay */
     .cooldown-text {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1.4rem;
+      font-size: 1.5rem;
       font-weight: 800;
       color: var(--warning);
       display: none;
@@ -370,7 +369,186 @@
       font-weight: 600;
     }
 
-    /* Feeding Schedule & Quick Stats */
+    /* ALARM & SCHEDULE MANAGER CARD */
+    .alarm-card {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .alarm-add-box {
+      display: flex;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .alarm-time-input {
+      background: rgba(2, 12, 27, 0.8);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      padding: 8px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      outline: none;
+      color-scheme: dark;
+    }
+
+    .alarm-label-input {
+      flex: 1;
+      min-width: 120px;
+      background: rgba(2, 12, 27, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .alarm-label-input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-add-alarm {
+      background: var(--primary);
+      color: #020c1b;
+      border: none;
+      font-weight: 700;
+      padding: 9px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-add-alarm:hover {
+      background: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .alarm-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .alarm-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.2s;
+    }
+    .alarm-item.active {
+      border-left: 3px solid var(--accent);
+    }
+    .alarm-item.disabled {
+      opacity: 0.55;
+      border-left: 3px solid #64748b;
+    }
+
+    .alarm-info-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .alarm-time-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .alarm-name {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .alarm-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Switch toggle */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--success);
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .btn-delete-alarm {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: color 0.2s;
+    }
+    .btn-delete-alarm:hover {
+      color: var(--danger);
+    }
+
+    /* Schedule & Next Meal Cards */
     .grid-info {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -411,7 +589,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      max-height: 280px;
+      max-height: 260px;
     }
     .log-header {
       display: flex;
@@ -448,6 +626,9 @@
       border-radius: var(--radius-sm);
       border-left: 3px solid var(--primary);
       font-size: 0.82rem;
+    }
+    .log-item.alarm {
+      border-left-color: #a78bfa;
     }
     .log-item.scheduled {
       border-left-color: var(--accent);
@@ -605,7 +786,7 @@
           <span>Cloud Fish Feeder</span>
         </div>
       </div>
-      <button class="btn-settings" id="btnOpenSettings" title="Configure HiveMQ Cloud & Topics">⚙️</button>
+      <button class="btn-settings" id="btnOpenSettings" title="Configure Cloud Broker & Topics">⚙️</button>
     </header>
 
     <!-- Feeder Status Card -->
@@ -614,7 +795,7 @@
         <div class="status-beacon connecting" id="statusBeacon"></div>
         <div class="status-info">
           <h2 id="statusHeadline">Connecting...</h2>
-          <p id="statusSubtitle">Connecting to HiveMQ Cloud WebSocket...</p>
+          <p id="statusSubtitle">Connecting to Cloud Broker...</p>
         </div>
       </div>
       <div class="time-badge">
@@ -623,16 +804,16 @@
       </div>
     </div>
 
-    <!-- Main Feed Control Card -->
+    <!-- Main Feed Control Card (5s Cooldown) -->
     <div class="card feed-card">
       <div class="pin-container">
-        <span class="pin-label">PIN Code:</span>
-        <input type="password" id="pinInput" class="pin-input" placeholder="Enter PIN (Default 1234)" maxlength="8" inputmode="numeric" value="1234">
+        <span class="pin-label">PIN:</span>
+        <input type="password" id="pinInput" class="pin-input" placeholder="PIN" maxlength="8" inputmode="numeric" value="1234">
         <span class="pin-badge" id="pinBadge">LOCKED</span>
       </div>
 
       <div class="feed-button-wrapper">
-        <svg class="feed-svg-ring" viewBox="0 0 190 190">
+        <svg class="feed-svg-ring" viewBox="0 0 180 180">
           <circle class="ring-bg"></circle>
           <circle class="ring-progress" id="cooldownRing"></circle>
         </svg>
@@ -641,7 +822,7 @@
           <div class="btn-feed-icon" id="btnIcon">🐟</div>
           <div class="btn-feed-text" id="btnMainText">Feed Now</div>
           <div class="btn-feed-sub" id="btnSubText">Tap to dispense</div>
-          <div class="cooldown-text" id="cooldownSeconds">30s</div>
+          <div class="cooldown-text" id="cooldownSeconds">5s</div>
         </button>
       </div>
 
@@ -650,22 +831,46 @@
       </p>
     </div>
 
-    <!-- Schedule & Next Meal Cards -->
+    <!-- ALARM & CUSTOM FEED SCHEDULE CARD -->
+    <div class="card alarm-card">
+      <div class="section-title-row">
+        <div class="section-title">
+          <span>⏰</span> Custom Feed Alarms
+        </div>
+        <span id="activeAlarmsCount" style="font-size: 0.72rem; color: var(--accent); font-weight: 700;">
+          0 Active
+        </span>
+      </div>
+
+      <!-- Add New Alarm Input -->
+      <div class="alarm-add-box">
+        <input type="time" id="newAlarmTime" class="alarm-time-input" value="12:00">
+        <input type="text" id="newAlarmLabel" class="alarm-label-input" placeholder="Label (e.g. Lunch)" maxlength="20">
+        <button id="btnAddAlarm" class="btn-add-alarm">+ Set</button>
+      </div>
+
+      <!-- List of Alarms -->
+      <div class="alarm-list" id="alarmList">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Next Feed Countdown Cards -->
     <div class="grid-info">
       <div class="card info-card">
         <div class="info-header">
-          <span>⏰</span> Auto Schedule
+          <span>🔔</span> Next Upcoming
         </div>
-        <div class="info-val">08:00 & 18:00</div>
-        <div class="info-sub">NTP Sync (Twice Daily)</div>
+        <div class="info-val" id="nextFeedTimer">--:--:--</div>
+        <div class="info-sub" id="nextFeedTarget">Upcoming schedule</div>
       </div>
 
       <div class="card info-card">
         <div class="info-header">
-          <span>⏳</span> Next Scheduled
+          <span>⚡</span> Rapid Window
         </div>
-        <div class="info-val" id="nextFeedTimer">--:--:--</div>
-        <div class="info-sub" id="nextFeedTarget">Upcoming feeding</div>
+        <div class="info-val">5 Seconds</div>
+        <div class="info-sub">Safe cooldown guard</div>
       </div>
     </div>
 
@@ -693,25 +898,25 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">HiveMQ Cluster Host</label>
-        <input type="text" id="cfgHost" class="form-input" placeholder="e.g. abc123.s1.eu.hivemq.cloud">
+        <label class="form-label">MQTT Broker Host</label>
+        <input type="text" id="cfgHost" class="form-input" placeholder="broker.hivemq.com">
         <span class="form-hint">Port 8884 with path /mqtt (Secure WebSocket)</span>
       </div>
 
       <div class="form-group">
         <label class="form-label">Team / Topic Prefix</label>
-        <input type="text" id="cfgTeam" class="form-input" placeholder="e.g. yourteam">
+        <input type="text" id="cfgTeam" class="form-input" placeholder="mithun_feeder">
         <span class="form-hint">Topics: [team]/fishfeeder/cmd and [team]/fishfeeder/status</span>
       </div>
 
       <div class="form-group">
-        <label class="form-label">MQTT Username (Web user)</label>
-        <input type="text" id="cfgUser" class="form-input" placeholder="webpage">
+        <label class="form-label">MQTT Username (Optional)</label>
+        <input type="text" id="cfgUser" class="form-input" placeholder="Leave empty for public broker">
       </div>
 
       <div class="form-group">
-        <label class="form-label">MQTT Password</label>
-        <input type="password" id="cfgPass" class="form-input" placeholder="Enter webpage MQTT password">
+        <label class="form-label">MQTT Password (Optional)</label>
+        <input type="password" id="cfgPass" class="form-input" placeholder="Leave empty for public broker">
       </div>
 
       <div class="form-group">
@@ -749,6 +954,142 @@
     let config = loadConfig();
 
     // =========================================================================
+    // ALARMS MANAGER (Local Storage & Auto-trigger)
+    // =========================================================================
+    const DEFAULT_ALARMS = [
+      { id: "1", time: "08:00", label: "Morning Feed", enabled: true },
+      { id: "2", time: "18:00", label: "Evening Feed", enabled: true }
+    ];
+
+    function loadAlarms() {
+      const saved = localStorage.getItem("aquafeed_alarms");
+      if (saved) {
+        try { return JSON.parse(saved); } catch(e){}
+      }
+      return DEFAULT_ALARMS;
+    }
+
+    let alarms = loadAlarms();
+    let triggeredAlarmsThisMinute = new Set();
+
+    function saveAlarms() {
+      localStorage.setItem("aquafeed_alarms", JSON.stringify(alarms));
+      renderAlarms();
+    }
+
+    function renderAlarms() {
+      const listEl = $('alarmList');
+      listEl.innerHTML = '';
+
+      const activeCount = alarms.filter(a => a.enabled).length;
+      $('activeAlarmsCount').textContent = `${activeCount} Active`;
+
+      if (alarms.length === 0) {
+        listEl.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px;">No alarms set. Add one above!</div>`;
+        return;
+      }
+
+      // Sort alarms chronologically
+      alarms.sort((a, b) => a.time.localeCompare(b.time));
+
+      alarms.forEach(alarm => {
+        const item = document.createElement('div');
+        item.className = `alarm-item ${alarm.enabled ? 'active' : 'disabled'}`;
+        item.innerHTML = `
+          <div class="alarm-info-left">
+            <span class="alarm-time-display">${alarm.time}</span>
+            <span class="alarm-name">${alarm.label || 'Alarm Feed'}</span>
+          </div>
+          <div class="alarm-actions">
+            <label class="switch">
+              <input type="checkbox" ${alarm.enabled ? 'checked' : ''} data-id="${alarm.id}">
+              <span class="slider"></span>
+            </label>
+            <button class="btn-delete-alarm" data-del="${alarm.id}" title="Delete alarm">&times;</button>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+
+      // Attach event listeners
+      listEl.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          const id = e.target.getAttribute('data-id');
+          const al = alarms.find(a => a.id === id);
+          if (al) {
+            al.enabled = e.target.checked;
+            saveAlarms();
+            addLog(`Alarm ${al.time} ${al.enabled ? 'Enabled' : 'Disabled'}`);
+          }
+        });
+      });
+
+      listEl.querySelectorAll('button[data-del]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.target.getAttribute('data-del');
+          alarms = alarms.filter(a => a.id !== id);
+          saveAlarms();
+          addLog("Alarm deleted");
+        });
+      });
+    }
+
+    $('btnAddAlarm').addEventListener('click', () => {
+      const timeVal = $('newAlarmTime').value;
+      if (!timeVal) return;
+      const labelVal = $('newAlarmLabel').value.trim() || "Scheduled Feed";
+
+      alarms.push({
+        id: Date.now().toString(),
+        time: timeVal,
+        label: labelVal,
+        enabled: true
+      });
+
+      saveAlarms();
+      $('newAlarmLabel').value = '';
+      addLog(`Added Alarm for ${timeVal} (${labelVal})`);
+      playAudioTone(700, 'sine', 0.1);
+    });
+
+    // Check alarms every second
+    function checkAlarms() {
+      const now = new Date();
+      const currentHH = String(now.getHours()).padStart(2, '0');
+      const currentMM = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${currentHH}:${currentMM}`;
+      const currentSec = now.getSeconds();
+
+      // Clear the trigger set when minute changes
+      if (currentSec === 0) {
+        triggeredAlarmsThisMinute.clear();
+      }
+
+      alarms.forEach(alarm => {
+        if (alarm.enabled && alarm.time === currentTimeStr && !triggeredAlarmsThisMinute.has(alarm.id)) {
+          triggeredAlarmsThisMinute.add(alarm.id);
+          triggerAlarmFeed(alarm);
+        }
+      });
+    }
+
+    function triggerAlarmFeed(alarm) {
+      addLog(`⏰ Alarm Triggered: ${alarm.time} (${alarm.label})`, 'alarm');
+      playAudioTone(950, 'triangle', 0.4);
+
+      if (client && client.connected) {
+        const topicCmd = `${config.team}/fishfeeder/cmd`;
+        client.publish(topicCmd, "FEED", { qos: 0 });
+        feedFeedback.textContent = `⏰ Alarm (${alarm.label}) triggered feeding!`;
+        feedFeedback.style.color = "var(--accent)";
+        startCooldown(5); // 5 second window!
+      } else {
+        feedFeedback.textContent = `Alarm triggered but broker disconnected!`;
+        feedFeedback.style.color = "var(--danger)";
+      }
+    }
+
+    // =========================================================================
     // UI ELEMENTS
     // =========================================================================
     const $ = id => document.getElementById(id);
@@ -783,7 +1124,7 @@
 
     $('initTime').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
-    // Web Audio synthesizer for tactile water drop sound
+    // Web Audio Synthesizer
     function playAudioTone(freq = 600, type = 'sine', duration = 0.15) {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -801,9 +1142,7 @@
       } catch(e) {}
     }
 
-    // =========================================================================
-    // LOGGING HELPER
-    // =========================================================================
+    // Logging Helper
     function addLog(text, type = "normal") {
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -816,7 +1155,6 @@
       `;
       logList.insertBefore(item, logList.firstChild);
 
-      // Keep max 25 logs
       while (logList.children.length > 25) {
         logList.removeChild(logList.lastChild);
       }
@@ -828,12 +1166,12 @@
     });
 
     // =========================================================================
-    // COOLDOWN LOGIC (30 Seconds)
+    // 5-SECOND COOLDOWN LOGIC
     // =========================================================================
     let cooldownTimer = null;
-    const RING_CIRCUMFERENCE = 553;
+    const RING_CIRCUMFERENCE = 521; // 2 * pi * 83
 
-    function startCooldown(durationSec = 30) {
+    function startCooldown(durationSec = 5) {
       let remaining = durationSec;
       clearInterval(cooldownTimer);
 
@@ -850,6 +1188,7 @@
 
         if (remaining <= 0) {
           clearInterval(cooldownTimer);
+          cooldownTimer = null;
           cooldownRing.style.strokeDashoffset = RING_CIRCUMFERENCE;
           cooldownSeconds.style.display = 'none';
           btnIcon.style.display = 'block';
@@ -858,7 +1197,7 @@
           
           if (isFeederOnline) {
             feedBtn.disabled = false;
-            feedFeedback.textContent = "Cooldown elapsed. Ready to feed.";
+            feedFeedback.textContent = "Ready to feed.";
             feedFeedback.style.color = "var(--text-muted)";
           }
         }
@@ -886,7 +1225,7 @@
 
       statusBeacon.className = 'status-beacon connecting';
       statusHeadline.textContent = 'Connecting...';
-      statusSubtitle.textContent = `Cluster: ${config.host}`;
+      statusSubtitle.textContent = `Broker: ${config.host}`;
       feedBtn.disabled = true;
 
       addLog(`Connecting to ${config.host}...`);
@@ -920,10 +1259,9 @@
         });
 
         client.on('error', (err) => {
-          console.error("MQTT Error:", err);
           statusBeacon.className = 'status-beacon offline';
           statusHeadline.textContent = 'Connection Error';
-          statusSubtitle.textContent = err.message || 'Check credentials in settings';
+          statusSubtitle.textContent = err.message || 'Check broker in settings';
           addLog(`Error: ${err.message || 'Broker connection failed'}`, 'offline');
         });
 
@@ -977,13 +1315,13 @@
         feedFeedback.style.color = "var(--accent)";
         addLog(`Feeder completed portion (Time: ${timePart})`, "normal");
         playAudioTone(1200, 'sine', 0.25);
-        startCooldown(30);
+        startCooldown(5); // 5 second window!
       } 
       else if (msg === "cooldown") {
-        feedFeedback.textContent = "Cooldown active on ESP32! Please wait 30s.";
+        feedFeedback.textContent = "Cooldown active on ESP32! Please wait 5s.";
         feedFeedback.style.color = "var(--warning)";
         addLog("ESP32 reported cooldown active", "cooldown");
-        startCooldown(30);
+        startCooldown(5);
       } 
       else {
         addLog(`Status: ${msg}`);
@@ -1013,15 +1351,11 @@
       client.publish(topicCmd, "FEED", { qos: 0 }, (err) => {
         if (!err) {
           playAudioTone(520, 'sine', 0.15);
-          feedFeedback.textContent = "Command sent! Feeder stirring & opening gate...";
+          feedFeedback.textContent = "Command sent! Feeder opening gate...";
           feedFeedback.style.color = "var(--primary)";
           addLog("Published 'FEED' command to cmd topic");
           
-          // Disable button immediately to prevent double-tap
-          feedBtn.disabled = true;
-          setTimeout(() => {
-            if (isFeederOnline && !cooldownTimer) feedBtn.disabled = false;
-          }, 5000);
+          startCooldown(5); // 5 second window!
         } else {
           feedFeedback.textContent = "Failed to send FEED command.";
           feedFeedback.style.color = "var(--danger)";
@@ -1042,45 +1376,58 @@
         pinBadge.style.background = "rgba(255, 83, 112, 0.15)";
       }
     });
-    // Trigger initial check
     pinInput.dispatchEvent(new Event('input'));
 
     // =========================================================================
-    // SCHEDULE COUNTDOWN HELPER (8:00 & 18:00)
+    // NEXT UPCOMING FEED COUNTDOWN HELPER
     // =========================================================================
     function updateScheduleTimer() {
       const now = new Date();
-      const h = now.getHours();
-      const m = now.getMinutes();
-      const s = now.getSeconds();
+      const activeAlarms = alarms.filter(a => a.enabled);
 
-      // Schedules: 8:00 and 18:00
-      let targetHour = 8;
-      let targetDate = new Date(now);
-      targetDate.setMinutes(0);
-      targetDate.setSeconds(0);
-      targetDate.setMilliseconds(0);
-
-      if (h < 8) {
-        targetDate.setHours(8);
-      } else if (h < 18) {
-        targetDate.setHours(18);
-      } else {
-        targetDate.setDate(targetDate.getDate() + 1);
-        targetDate.setHours(8);
+      if (activeAlarms.length === 0) {
+        nextFeedTimer.textContent = "--:--:--";
+        nextFeedTarget.textContent = "No alarms active";
+        return;
       }
 
-      const diffSec = Math.floor((targetDate - now) / 1000);
-      const hoursLeft = Math.floor(diffSec / 3600);
-      const minsLeft = Math.floor((diffSec % 3600) / 60);
-      const secsLeft = diffSec % 60;
+      let closestDiff = Infinity;
+      let closestTarget = null;
+      let closestAlarm = null;
 
-      const pad = n => String(n).padStart(2, '0');
-      nextFeedTimer.textContent = `${pad(hoursLeft)}:${pad(minsLeft)}:${pad(secsLeft)}`;
-      nextFeedTarget.textContent = `At ${pad(targetDate.getHours())}:00 (${targetDate.getHours() === 8 ? 'Morning' : 'Evening'})`;
+      activeAlarms.forEach(alarm => {
+        const [h, m] = alarm.time.split(':').map(Number);
+        const target = new Date(now);
+        target.setHours(h, m, 0, 0);
+
+        if (target <= now) {
+          target.setDate(target.getDate() + 1);
+        }
+
+        const diff = target - now;
+        if (diff < closestDiff) {
+          closestDiff = diff;
+          closestTarget = target;
+          closestAlarm = alarm;
+        }
+      });
+
+      if (closestTarget) {
+        const diffSec = Math.floor(closestDiff / 1000);
+        const hoursLeft = Math.floor(diffSec / 3600);
+        const minsLeft = Math.floor((diffSec % 3600) / 60);
+        const secsLeft = diffSec % 60;
+
+        const pad = n => String(n).padStart(2, '0');
+        nextFeedTimer.textContent = `${pad(hoursLeft)}:${pad(minsLeft)}:${pad(secsLeft)}`;
+        nextFeedTarget.textContent = `At ${closestAlarm.time} (${closestAlarm.label})`;
+      }
     }
-    setInterval(updateScheduleTimer, 1000);
-    updateScheduleTimer();
+
+    setInterval(() => {
+      updateScheduleTimer();
+      checkAlarms();
+    }, 1000);
 
     // =========================================================================
     // SETTINGS MODAL BEHAVIOR
@@ -1107,7 +1454,7 @@
     });
 
     btnResetDefaults.addEventListener('click', () => {
-      if (confirm("Reset to template default credentials?")) {
+      if (confirm("Reset to default parameters?")) {
         config = { ...DEFAULT_CONFIG };
         localStorage.removeItem("aquafeed_cfg");
         populateModal();
@@ -1117,8 +1464,8 @@
     btnSaveConfig.addEventListener('click', () => {
       config.host = cfgHost.value.trim() || DEFAULT_CONFIG.host;
       config.team = cfgTeam.value.trim() || DEFAULT_CONFIG.team;
-      config.user = cfgUser.value.trim() || DEFAULT_CONFIG.user;
-      config.pass = cfgPass.value.trim() || DEFAULT_CONFIG.pass;
+      config.user = cfgUser.value.trim();
+      config.pass = cfgPass.value.trim();
       config.pin = cfgPin.value.trim() || DEFAULT_CONFIG.pin;
 
       localStorage.setItem("aquafeed_cfg", JSON.stringify(config));
@@ -1131,7 +1478,9 @@
 
     // Auto connect on startup
     window.addEventListener('DOMContentLoaded', () => {
+      renderAlarms();
       initMQTT();
+      updateScheduleTimer();
     });
   </script>
 </body>
