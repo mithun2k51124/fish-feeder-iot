@@ -933,8 +933,10 @@
 
   <script>
     // =========================================================================
-    // CONFIGURATION & PERSISTENCE
+    // 1. HELPERS & DOM ELEMENTS (MUST BE AT VERY TOP)
     // =========================================================================
+    const $ = id => document.getElementById(id);
+
     const DEFAULT_CONFIG = {
       host: "broker.hivemq.com",
       user: "",
@@ -946,153 +948,21 @@
     function loadConfig() {
       const saved = localStorage.getItem("aquafeed_cfg");
       if (saved) {
-        try { return { ...DEFAULT_CONFIG, ...JSON.parse(saved) }; } catch(e){}
+        try { 
+          const parsed = JSON.parse(saved);
+          if (!parsed.host || parsed.host.includes("YOUR-CLUSTER") || parsed.host.includes("hivemq.cloud")) {
+            parsed.host = DEFAULT_CONFIG.host;
+            localStorage.setItem("aquafeed_cfg", JSON.stringify(parsed));
+          }
+          return { ...DEFAULT_CONFIG, ...parsed }; 
+        } catch(e){}
       }
       return { ...DEFAULT_CONFIG };
     }
 
     let config = loadConfig();
 
-    // =========================================================================
-    // ALARMS MANAGER (Local Storage & Auto-trigger)
-    // =========================================================================
-    const DEFAULT_ALARMS = [
-      { id: "1", time: "08:00", label: "Morning Feed", enabled: true },
-      { id: "2", time: "18:00", label: "Evening Feed", enabled: true }
-    ];
-
-    function loadAlarms() {
-      const saved = localStorage.getItem("aquafeed_alarms");
-      if (saved) {
-        try { return JSON.parse(saved); } catch(e){}
-      }
-      return DEFAULT_ALARMS;
-    }
-
-    let alarms = loadAlarms();
-    let triggeredAlarmsThisMinute = new Set();
-
-    function saveAlarms() {
-      localStorage.setItem("aquafeed_alarms", JSON.stringify(alarms));
-      renderAlarms();
-    }
-
-    function renderAlarms() {
-      const listEl = $('alarmList');
-      listEl.innerHTML = '';
-
-      const activeCount = alarms.filter(a => a.enabled).length;
-      $('activeAlarmsCount').textContent = `${activeCount} Active`;
-
-      if (alarms.length === 0) {
-        listEl.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px;">No alarms set. Add one above!</div>`;
-        return;
-      }
-
-      // Sort alarms chronologically
-      alarms.sort((a, b) => a.time.localeCompare(b.time));
-
-      alarms.forEach(alarm => {
-        const item = document.createElement('div');
-        item.className = `alarm-item ${alarm.enabled ? 'active' : 'disabled'}`;
-        item.innerHTML = `
-          <div class="alarm-info-left">
-            <span class="alarm-time-display">${alarm.time}</span>
-            <span class="alarm-name">${alarm.label || 'Alarm Feed'}</span>
-          </div>
-          <div class="alarm-actions">
-            <label class="switch">
-              <input type="checkbox" ${alarm.enabled ? 'checked' : ''} data-id="${alarm.id}">
-              <span class="slider"></span>
-            </label>
-            <button class="btn-delete-alarm" data-del="${alarm.id}" title="Delete alarm">&times;</button>
-          </div>
-        `;
-        listEl.appendChild(item);
-      });
-
-      // Attach event listeners
-      listEl.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-        chk.addEventListener('change', (e) => {
-          const id = e.target.getAttribute('data-id');
-          const al = alarms.find(a => a.id === id);
-          if (al) {
-            al.enabled = e.target.checked;
-            saveAlarms();
-            addLog(`Alarm ${al.time} ${al.enabled ? 'Enabled' : 'Disabled'}`);
-          }
-        });
-      });
-
-      listEl.querySelectorAll('button[data-del]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const id = e.target.getAttribute('data-del');
-          alarms = alarms.filter(a => a.id !== id);
-          saveAlarms();
-          addLog("Alarm deleted");
-        });
-      });
-    }
-
-    $('btnAddAlarm').addEventListener('click', () => {
-      const timeVal = $('newAlarmTime').value;
-      if (!timeVal) return;
-      const labelVal = $('newAlarmLabel').value.trim() || "Scheduled Feed";
-
-      alarms.push({
-        id: Date.now().toString(),
-        time: timeVal,
-        label: labelVal,
-        enabled: true
-      });
-
-      saveAlarms();
-      $('newAlarmLabel').value = '';
-      addLog(`Added Alarm for ${timeVal} (${labelVal})`);
-      playAudioTone(700, 'sine', 0.1);
-    });
-
-    // Check alarms every second
-    function checkAlarms() {
-      const now = new Date();
-      const currentHH = String(now.getHours()).padStart(2, '0');
-      const currentMM = String(now.getMinutes()).padStart(2, '0');
-      const currentTimeStr = `${currentHH}:${currentMM}`;
-      const currentSec = now.getSeconds();
-
-      // Clear the trigger set when minute changes
-      if (currentSec === 0) {
-        triggeredAlarmsThisMinute.clear();
-      }
-
-      alarms.forEach(alarm => {
-        if (alarm.enabled && alarm.time === currentTimeStr && !triggeredAlarmsThisMinute.has(alarm.id)) {
-          triggeredAlarmsThisMinute.add(alarm.id);
-          triggerAlarmFeed(alarm);
-        }
-      });
-    }
-
-    function triggerAlarmFeed(alarm) {
-      addLog(`⏰ Alarm Triggered: ${alarm.time} (${alarm.label})`, 'alarm');
-      playAudioTone(950, 'triangle', 0.4);
-
-      if (client && client.connected) {
-        const topicCmd = `${config.team}/fishfeeder/cmd`;
-        client.publish(topicCmd, "FEED", { qos: 0 });
-        feedFeedback.textContent = `⏰ Alarm (${alarm.label}) triggered feeding!`;
-        feedFeedback.style.color = "var(--accent)";
-        startCooldown(5); // 5 second window!
-      } else {
-        feedFeedback.textContent = `Alarm triggered but broker disconnected!`;
-        feedFeedback.style.color = "var(--danger)";
-      }
-    }
-
-    // =========================================================================
-    // UI ELEMENTS
-    // =========================================================================
-    const $ = id => document.getElementById(id);
+    // DOM References
     const statusBeacon = $('statusBeacon');
     const statusHeadline = $('statusHeadline');
     const statusSubtitle = $('statusSubtitle');
@@ -1110,7 +980,7 @@
     const nextFeedTimer = $('nextFeedTimer');
     const nextFeedTarget = $('nextFeedTarget');
 
-    // Modal elements
+    // Modal References
     const modalBackdrop = $('modalBackdrop');
     const btnOpenSettings = $('btnOpenSettings');
     const btnCloseModal = $('btnCloseModal');
@@ -1166,10 +1036,161 @@
     });
 
     // =========================================================================
-    // 5-SECOND COOLDOWN LOGIC
+    // 2. PIN CHECK
+    // =========================================================================
+    function checkPin() {
+      if (pinInput.value.trim() === config.pin) {
+        pinBadge.textContent = "UNLOCKED";
+        pinBadge.style.color = "var(--success)";
+        pinBadge.style.background = "rgba(6, 214, 160, 0.15)";
+      } else {
+        pinBadge.textContent = "LOCKED";
+        pinBadge.style.color = "var(--danger)";
+        pinBadge.style.background = "rgba(255, 83, 112, 0.15)";
+      }
+    }
+    pinInput.value = config.pin || "1234";
+    pinInput.addEventListener('input', checkPin);
+    checkPin();
+
+    // =========================================================================
+    // 3. ALARMS & CUSTOM SCHEDULES
+    // =========================================================================
+    const DEFAULT_ALARMS = [
+      { id: "1", time: "08:00", label: "Morning Feed", enabled: true },
+      { id: "2", time: "18:00", label: "Evening Feed", enabled: true }
+    ];
+
+    function loadAlarms() {
+      const saved = localStorage.getItem("aquafeed_alarms");
+      if (saved) {
+        try { return JSON.parse(saved); } catch(e){}
+      }
+      return DEFAULT_ALARMS;
+    }
+
+    let alarms = loadAlarms();
+    let triggeredAlarmsThisMinute = new Set();
+
+    function saveAlarms() {
+      localStorage.setItem("aquafeed_alarms", JSON.stringify(alarms));
+      renderAlarms();
+    }
+
+    function renderAlarms() {
+      const listEl = $('alarmList');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+
+      const activeCount = alarms.filter(a => a.enabled).length;
+      $('activeAlarmsCount').textContent = `${activeCount} Active`;
+
+      if (alarms.length === 0) {
+        listEl.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px;">No alarms set. Add one above!</div>`;
+        return;
+      }
+
+      alarms.sort((a, b) => a.time.localeCompare(b.time));
+
+      alarms.forEach(alarm => {
+        const item = document.createElement('div');
+        item.className = `alarm-item ${alarm.enabled ? 'active' : 'disabled'}`;
+        item.innerHTML = `
+          <div class="alarm-info-left">
+            <span class="alarm-time-display">${alarm.time}</span>
+            <span class="alarm-name">${alarm.label || 'Alarm Feed'}</span>
+          </div>
+          <div class="alarm-actions">
+            <label class="switch">
+              <input type="checkbox" ${alarm.enabled ? 'checked' : ''} data-id="${alarm.id}">
+              <span class="slider"></span>
+            </label>
+            <button class="btn-delete-alarm" data-del="${alarm.id}" title="Delete alarm">&times;</button>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+
+      listEl.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          const id = e.target.getAttribute('data-id');
+          const al = alarms.find(a => a.id === id);
+          if (al) {
+            al.enabled = e.target.checked;
+            saveAlarms();
+            addLog(`Alarm ${al.time} ${al.enabled ? 'Enabled' : 'Disabled'}`);
+          }
+        });
+      });
+
+      listEl.querySelectorAll('button[data-del]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.target.getAttribute('data-del');
+          alarms = alarms.filter(a => a.id !== id);
+          saveAlarms();
+          addLog("Alarm deleted");
+        });
+      });
+    }
+
+    $('btnAddAlarm').addEventListener('click', () => {
+      const timeVal = $('newAlarmTime').value;
+      if (!timeVal) return;
+      const labelVal = $('newAlarmLabel').value.trim() || "Scheduled Feed";
+
+      alarms.push({
+        id: Date.now().toString(),
+        time: timeVal,
+        label: labelVal,
+        enabled: true
+      });
+
+      saveAlarms();
+      $('newAlarmLabel').value = '';
+      addLog(`Added Alarm for ${timeVal} (${labelVal})`);
+      playAudioTone(700, 'sine', 0.1);
+    });
+
+    function checkAlarms() {
+      const now = new Date();
+      const currentHH = String(now.getHours()).padStart(2, '0');
+      const currentMM = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${currentHH}:${currentMM}`;
+      const currentSec = now.getSeconds();
+
+      if (currentSec === 0) {
+        triggeredAlarmsThisMinute.clear();
+      }
+
+      alarms.forEach(alarm => {
+        if (alarm.enabled && alarm.time === currentTimeStr && !triggeredAlarmsThisMinute.has(alarm.id)) {
+          triggeredAlarmsThisMinute.add(alarm.id);
+          triggerAlarmFeed(alarm);
+        }
+      });
+    }
+
+    function triggerAlarmFeed(alarm) {
+      addLog(`⏰ Alarm Triggered: ${alarm.time} (${alarm.label})`, 'alarm');
+      playAudioTone(950, 'triangle', 0.4);
+
+      if (client && client.connected) {
+        const topicCmd = `${config.team}/fishfeeder/cmd`;
+        client.publish(topicCmd, "FEED", { qos: 0 });
+        feedFeedback.textContent = `⏰ Alarm (${alarm.label}) triggered feeding!`;
+        feedFeedback.style.color = "var(--accent)";
+        startCooldown(5);
+      } else {
+        feedFeedback.textContent = `Alarm triggered but broker disconnected!`;
+        feedFeedback.style.color = "var(--danger)";
+      }
+    }
+
+    // =========================================================================
+    // 4. 5-SECOND COOLDOWN LOGIC
     // =========================================================================
     let cooldownTimer = null;
-    const RING_CIRCUMFERENCE = 521; // 2 * pi * 83
+    const RING_CIRCUMFERENCE = 521;
 
     function startCooldown(durationSec = 5) {
       let remaining = durationSec;
@@ -1209,7 +1230,7 @@
     }
 
     // =========================================================================
-    // MQTT CLIENT
+    // 5. MQTT CLIENT OVER WEBSOCKETS
     // =========================================================================
     let client = null;
     let isFeederOnline = false;
@@ -1225,7 +1246,7 @@
 
       statusBeacon.className = 'status-beacon connecting';
       statusHeadline.textContent = 'Connecting...';
-      statusSubtitle.textContent = `Broker: ${config.host}`;
+      statusSubtitle.textContent = `Broker: ${config.host} (WSS:8884)`;
       feedBtn.disabled = true;
 
       addLog(`Connecting to ${config.host}...`);
@@ -1243,7 +1264,7 @@
 
         client.on('connect', () => {
           statusSubtitle.textContent = 'Broker connected. Waiting for feeder...';
-          addLog(`Connected to ${config.host}`);
+          addLog(`Connected to broker: ${config.host}`);
           client.subscribe(topicStatus, { qos: 0 }, (err) => {
             if (!err) {
               addLog(`Subscribed to: ${topicStatus}`);
@@ -1259,6 +1280,7 @@
         });
 
         client.on('error', (err) => {
+          console.error("MQTT Error:", err);
           statusBeacon.className = 'status-beacon offline';
           statusHeadline.textContent = 'Connection Error';
           statusSubtitle.textContent = err.message || 'Check broker in settings';
@@ -1315,7 +1337,7 @@
         feedFeedback.style.color = "var(--accent)";
         addLog(`Feeder completed portion (Time: ${timePart})`, "normal");
         playAudioTone(1200, 'sine', 0.25);
-        startCooldown(5); // 5 second window!
+        startCooldown(5);
       } 
       else if (msg === "cooldown") {
         feedFeedback.textContent = "Cooldown active on ESP32! Please wait 5s.";
@@ -1329,7 +1351,7 @@
     }
 
     // =========================================================================
-    // FEED BUTTON ACTION
+    // 6. FEED BUTTON ACTION
     // =========================================================================
     feedBtn.addEventListener('click', () => {
       const enteredPin = pinInput.value.trim();
@@ -1354,8 +1376,7 @@
           feedFeedback.textContent = "Command sent! Feeder opening gate...";
           feedFeedback.style.color = "var(--primary)";
           addLog("Published 'FEED' command to cmd topic");
-          
-          startCooldown(5); // 5 second window!
+          startCooldown(5);
         } else {
           feedFeedback.textContent = "Failed to send FEED command.";
           feedFeedback.style.color = "var(--danger)";
@@ -1364,22 +1385,8 @@
       });
     });
 
-    // PIN check feedback
-    pinInput.addEventListener('input', () => {
-      if (pinInput.value.trim() === config.pin) {
-        pinBadge.textContent = "UNLOCKED";
-        pinBadge.style.color = "var(--success)";
-        pinBadge.style.background = "rgba(6, 214, 160, 0.15)";
-      } else {
-        pinBadge.textContent = "LOCKED";
-        pinBadge.style.color = "var(--danger)";
-        pinBadge.style.background = "rgba(255, 83, 112, 0.15)";
-      }
-    });
-    pinInput.dispatchEvent(new Event('input'));
-
     // =========================================================================
-    // NEXT UPCOMING FEED COUNTDOWN HELPER
+    // 7. COUNTDOWN TIMER
     // =========================================================================
     function updateScheduleTimer() {
       const now = new Date();
@@ -1430,7 +1437,7 @@
     }, 1000);
 
     // =========================================================================
-    // SETTINGS MODAL BEHAVIOR
+    // 8. SETTINGS MODAL BEHAVIOR
     // =========================================================================
     function populateModal() {
       cfgHost.value = config.host;
@@ -1471,7 +1478,7 @@
       localStorage.setItem("aquafeed_cfg", JSON.stringify(config));
       modalBackdrop.classList.remove('open');
       pinInput.value = config.pin;
-      pinInput.dispatchEvent(new Event('input'));
+      checkPin();
       addLog("Settings updated. Reconnecting...");
       initMQTT();
     });
